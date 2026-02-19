@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scriptorium – Biblioteca</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav">
+        <a class="brand" href="/">
+          <span class="sigil"></span>
+          Scriptorium
+        </a>
+        <button id="reload" class="btn">Recarregar</button>
+      </nav>
+
+      <header class="hero container">
+        <h1>Catálogo da Biblioteca</h1>
+        <p>Registre tomos, consulte o acervo e gerencie empréstimos como num antigo scriptorium.</p>
+      </header>
+
+      <main class="container">
+        <div class="grid-2">
+          <section class="form">
+            <h3>Adicionar Livro</h3>
+            <label for="title">Título</label>
+            <input id="title" class="input" placeholder="O Nome do Vento" />
+            <label for="author">Autor</label>
+            <input id="author" class="input" placeholder="Patrick Rothfuss" />
+            <label for="qty">Quantidade</label>
+            <input id="qty" type="number" class="input" value="1" min="0" />
+            <button id="addBook" class="btn">Cadastrar Tomo</button>
+          </section>
+
+          <section class="form">
+            <h3>Emprestar Livro</h3>
+            <label for="loanBookId">ID do Livro</label>
+            <input id="loanBookId" class="input" placeholder="ex: 1" />
+            <button id="loanBook" class="btn secondary">Registrar Empréstimo</button>
+          </section>
+        </div>
+
+        <section id="books" class="shelf" aria-live="polite"></section>
+      </main>
+
+      <footer class="footer">
+        <small>Scriptorium • Exercicio Final – Biblioteca</small>
+      </footer>
+    </div>
+
+    <script>
+      const booksEl = document.getElementById('books');
+      const reloadBtn = document.getElementById('reload');
+      const addBtn = document.getElementById('addBook');
+      const loanBtn = document.getElementById('loanBook');
+
+      async function fetchBooks() {
+        const res = await fetch('/api/books');
+        const data = await res.json();
+        renderBooks(data);
+      }
+
+      function renderBooks(books) {
+        booksEl.innerHTML = '';
+        books.forEach(b => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h3>${b.title}</h3>
+            <p class="muted">Autor: ${b.author}</p>
+            <p class="muted">ID: ${b.id}</p>
+            <p class="muted">Exemplares: ${b.quantityAvalible}</p>
+            <div style="display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap">
+              <button class="btn danger js-delete" data-id="${b.id}">Remover</button>
+            </div>
+          `;
+          card.querySelector('.js-delete').addEventListener('click', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            await fetch('/api/books/' + id, { method: 'DELETE' });
+            fetchBooks();
+          });
+          booksEl.appendChild(card);
+        });
+      }
+
+      addBtn.addEventListener('click', async () => {
+        const title = document.getElementById('title').value.trim();
+        const author = document.getElementById('author').value.trim();
+        const qty = Number(document.getElementById('qty').value);
+        if (!title || !author || Number.isNaN(qty)) return;
+        await fetch('/api/books', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, author, quantityAvalible: qty })
+        });
+        document.getElementById('title').value = '';
+        document.getElementById('author').value = '';
+        document.getElementById('qty').value = 1;
+        fetchBooks();
+      });
+
+      loanBtn.addEventListener('click', async () => {
+        const bookId = document.getElementById('loanBookId').value.trim();
+        if (!bookId) return;
+        // Em produção, precisaria de token via /auth/login.
+        // Para teste rápido sem auth, este endpoint exige ensureauth.
+        alert('Este endpoint requer autenticação via Bearer token.\nUse /auth/register e /auth/login para obter um token e faça a requisição via ferramenta REST.');
+      });
+
+      reloadBtn.addEventListener('click', fetchBooks);
+      fetchBooks();
+    </script>
+  </body>
+  </html>

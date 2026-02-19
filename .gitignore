@@ -1,0 +1,4 @@
+//ignorar os dados que precisar
+
+node_modules
+.env
