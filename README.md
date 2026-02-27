@@ -1,4 +1,4 @@
-## Exercicio Final – Biblioteca (Scriptorium)
+## Biblioteca (Scriptorium)
 
 Aplicação Node.js com Express para gerenciar um acervo de biblioteca (livros e empréstimos), com autenticação JWT. Inclui uma página estática com visual rústico medieval para interação básica com o acervo.
 
