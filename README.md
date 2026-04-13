@@ -49,14 +49,15 @@ npm start
 A aplicacao sobe em `http://localhost:3000` por padrao.
 
 ### Paginas da Interface
-- `/`: catalogo principal, cadastro de livros e registro de emprestimos
-- `/auth.html`: pagina de registro, login e logout
+- `/`: pagina inicial de login e cadastro
+- `/auth.html`: pagina alternativa de login e cadastro
+- `/catalog.html`: catalogo protegido, acessivel apenas para usuario autenticado
 
 ### Fluxo de Uso
-1. Acesse `/auth.html`
+1. Acesse `/`
 2. Registre um usuario
 3. Faca login
-4. Volte para `/`
+4. O sistema redireciona para `/catalog.html`
 5. Cadastre livros e registre emprestimos
 
 ### Autenticacao
@@ -64,7 +65,7 @@ A aplicacao sobe em `http://localhost:3000` por padrao.
 - `POST /auth/login` autentica com `{ email, password }` e retorna um JWT
 - Endpoints protegidos exigem `Authorization: Bearer <token>`
 
-O token e salvo no navegador e a interface exibe o usuario logado no topo da pagina principal.
+O token e salvo no navegador, a interface exibe o usuario logado no topo do catalogo e o acesso a `/catalog.html` redireciona para `/` quando nao existe usuario autenticado.
 
 ### Endpoints
 
@@ -114,7 +115,7 @@ Observacao:
 Checklist antes do deploy:
 - configurar `JWT_SECRETKEY` no painel da Vercel
 - confirmar que `npm start` sobe a aplicacao localmente
-- validar acesso a `/` e `/auth.html`
+- validar acesso a `/`, `/auth.html` e `/catalog.html`
 - subir o repositorio com `vercel.json`, `api/index.js` e `src/app.js`
 
 ### Limitacoes Importantes

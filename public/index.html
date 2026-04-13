@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Scriptorium – Biblioteca</title>
+    <title>Scriptorium - Acesso</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
@@ -14,44 +14,49 @@
           Scriptorium
         </a>
         <div class="nav-actions">
-          <span id="currentUser" class="user-chip">Visitante</span>
-          <a id="authLink" class="btn secondary" href="/auth.html">Entrar / Registrar</a>
-          <button id="logoutUser" class="btn danger" type="button">Sair</button>
-          <button id="reload" class="btn">Recarregar</button>
+          <a class="btn secondary" href="/catalog.html">Ir para catalogo</a>
         </div>
       </nav>
 
       <header class="hero container">
-        <h1>Catálogo da Biblioteca</h1>
-        <p>Registre tomos, consulte o acervo e gerencie empréstimos como num antigo scriptorium.</p>
+        <h1>Acesso ao Scriptorium</h1>
+        <p>Registre sua conta ou entre para acessar o catalogo e gerenciar os emprestimos da biblioteca.</p>
       </header>
 
       <main class="container">
-        <div class="grid-2">
+        <section class="form auth-status">
+          <h3>Sessao Atual</h3>
+          <p id="sessionStatus" class="muted">Nenhum usuario autenticado.</p>
+        </section>
+
+        <div class="grid-2 auth-grid">
           <section class="form">
-            <h3>Adicionar Livro</h3>
-            <label for="title">Título</label>
-            <input id="title" class="input" placeholder="O Nome do Vento" />
-            <label for="author">Autor</label>
-            <input id="author" class="input" placeholder="Patrick Rothfuss" />
-            <label for="qty">Quantidade</label>
-            <input id="qty" type="number" class="input" value="1" min="0" />
-            <button id="addBook" class="btn">Cadastrar Tomo</button>
+            <h3>Registrar</h3>
+            <label for="registerName">Nome</label>
+            <input id="registerName" class="input" placeholder="Seu nome" />
+            <label for="registerEmail">E-mail</label>
+            <input id="registerEmail" type="email" class="input" placeholder="voce@email.com" />
+            <label for="registerPassword">Senha</label>
+            <input id="registerPassword" type="password" class="input" placeholder="********" />
+            <button id="registerUser" class="btn">Criar Conta</button>
           </section>
 
           <section class="form">
-            <h3>Emprestar Livro</h3>
-            <label for="loanBookId">ID do Livro</label>
-            <input id="loanBookId" class="input" placeholder="ex: 1" />
-            <button id="loanBook" class="btn secondary">Registrar Empréstimo</button>
+            <h3>Entrar</h3>
+            <label for="loginEmail">E-mail</label>
+            <input id="loginEmail" type="email" class="input" placeholder="voce@email.com" />
+            <label for="loginPassword">Senha</label>
+            <input id="loginPassword" type="password" class="input" placeholder="********" />
+            <div class="stack-actions">
+              <button id="loginUser" class="btn secondary">Entrar</button>
+              <button id="logoutUser" class="btn danger" type="button">Sair</button>
+            </div>
           </section>
         </div>
-
-        <section id="books" class="shelf" aria-live="polite"></section>
       </main>
 
       <footer class="footer">
-        <small>Scriptorium • Exercicio Final – Biblioteca</small>
+        <small>Scriptorium - Exercicio Final - Biblioteca</small>
       </footer>
     </div>
 
@@ -74,13 +79,10 @@
     </div>
 
     <script>
-      const booksEl = document.getElementById('books');
-      const currentUserEl = document.getElementById('currentUser');
-      const authLinkEl = document.getElementById('authLink');
+      const sessionStatusEl = document.getElementById('sessionStatus');
+      const registerBtn = document.getElementById('registerUser');
+      const loginBtn = document.getElementById('loginUser');
       const logoutBtn = document.getElementById('logoutUser');
-      const reloadBtn = document.getElementById('reload');
-      const addBtn = document.getElementById('addBook');
-      const loanBtn = document.getElementById('loanBook');
       const modalEl = document.getElementById('appModal');
       const modalCardEl = document.getElementById('modalCard');
       const modalBadgeEl = document.getElementById('modalBadge');
@@ -92,10 +94,6 @@
 
       function getToken() {
         return localStorage.getItem(TOKEN_KEY);
-      }
-
-      function clearToken() {
-        localStorage.removeItem(TOKEN_KEY);
       }
 
       function decodeToken(token) {
@@ -121,19 +119,24 @@
 
         return {
           id: payload.id,
-          name: payload.name || 'Usuário',
+          name: payload.name || 'Usuario',
           email: payload.email || ''
         };
       }
 
-      function updateAuthStatus() {
-        const user = getCurrentUser();
+      function setToken(token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
 
-        currentUserEl.textContent = user
-          ? `${user.name} (${user.email})`
-          : 'Visitante';
-        authLinkEl.textContent = user ? 'Trocar Conta' : 'Entrar / Registrar';
-        logoutBtn.hidden = !user;
+      function clearToken() {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+
+      function updateSessionStatus() {
+        const user = getCurrentUser();
+        sessionStatusEl.textContent = user
+          ? `Logado como ${user.name} (${user.email}).`
+          : 'Nenhum usuario autenticado.';
       }
 
       function showModal({ title, message, type = 'warning', buttonText = 'Entendi' }) {
@@ -168,96 +171,70 @@
         return data;
       }
 
-      async function fetchBooks() {
-        try {
-          const data = await requestJson('/api/books');
-          renderBooks(data);
-        } catch (error) {
-          showModal({ title: 'Falha ao carregar livros', message: error.message, type: 'error' });
-        }
-      }
+      registerBtn.addEventListener('click', async () => {
+        const name = document.getElementById('registerName').value.trim();
+        const email = document.getElementById('registerEmail').value.trim();
+        const password = document.getElementById('registerPassword').value;
 
-      function renderBooks(books) {
-        booksEl.innerHTML = '';
-        books.forEach(b => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <h3>${b.title}</h3>
-            <p class="muted">Autor: ${b.author}</p>
-            <p class="muted">ID: ${b.id}</p>
-            <p class="muted">Exemplares: ${b.quantityAvalible}</p>
-            <div style="display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap">
-              <button class="btn danger js-delete" data-id="${b.id}">Remover</button>
-            </div>
-          `;
-          card.querySelector('.js-delete').addEventListener('click', async (e) => {
-            const id = e.target.getAttribute('data-id');
-            await fetch('/api/books/' + id, { method: 'DELETE' });
-            fetchBooks();
-          });
-          booksEl.appendChild(card);
-        });
-      }
-
-      addBtn.addEventListener('click', async () => {
-        const title = document.getElementById('title').value.trim();
-        const author = document.getElementById('author').value.trim();
-        const qty = Number(document.getElementById('qty').value);
-        if (!title || !author || Number.isNaN(qty)) return;
-        try {
-          await requestJson('/api/books', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, author, quantityAvalible: qty })
-          });
-          document.getElementById('title').value = '';
-          document.getElementById('author').value = '';
-          document.getElementById('qty').value = 1;
-          fetchBooks();
-        } catch (error) {
-          showModal({ title: 'Falha ao cadastrar livro', message: error.message, type: 'error' });
-        }
-      });
-
-      logoutBtn.addEventListener('click', () => {
-        clearToken();
-        updateAuthStatus();
-        showModal({ title: 'Sessão encerrada', message: 'O usuário foi desconectado com sucesso.', type: 'success' });
-      });
-
-      loanBtn.addEventListener('click', async () => {
-        const bookId = document.getElementById('loanBookId').value.trim();
-        if (!bookId) return;
-        const token = getToken();
-        if (!token) {
+        if (!name || !email || !password) {
           showModal({
-            title: 'Login necessário',
-            message: 'Faça login na página de acesso para registrar um empréstimo.',
+            title: 'Campos obrigatorios',
+            message: 'Preencha nome, e-mail e senha para registrar.',
             type: 'warning'
           });
           return;
         }
 
         try {
-          await requestJson('/api/loans', {
+          await requestJson('/auth/register', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({ bookId })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
           });
-          document.getElementById('loanBookId').value = '';
+
+          document.getElementById('loginEmail').value = email;
+          document.getElementById('loginPassword').value = password;
           showModal({
-            title: 'Empréstimo registrado',
-            message: 'O empréstimo foi criado com sucesso para o livro informado.',
+            title: 'Cadastro concluido',
+            message: 'Usuario registrado com sucesso. Agora faca login.',
             type: 'success'
           });
-          fetchBooks();
         } catch (error) {
-          showModal({ title: 'Falha ao registrar empréstimo', message: error.message, type: 'error' });
+          showModal({ title: 'Falha ao registrar', message: error.message, type: 'error' });
         }
+      });
+
+      loginBtn.addEventListener('click', async () => {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!email || !password) {
+          showModal({
+            title: 'Campos obrigatorios',
+            message: 'Preencha e-mail e senha para entrar.',
+            type: 'warning'
+          });
+          return;
+        }
+
+        try {
+          const token = await requestJson('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          setToken(token);
+          window.location.href = '/catalog.html';
+        } catch (error) {
+          showModal({ title: 'Falha no login', message: error.message, type: 'error' });
+        }
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        clearToken();
+        updateSessionStatus();
+        showModal({ title: 'Sessao encerrada', message: 'O usuario foi desconectado com sucesso.', type: 'success' });
       });
 
       modalDismissTopEl.addEventListener('click', closeModal);
@@ -273,9 +250,12 @@
         }
       });
 
-      reloadBtn.addEventListener('click', fetchBooks);
-      updateAuthStatus();
-      fetchBooks();
+      const user = getCurrentUser();
+      if (user) {
+        window.location.replace('/catalog.html');
+      }
+
+      updateSessionStatus();
     </script>
   </body>
   </html>

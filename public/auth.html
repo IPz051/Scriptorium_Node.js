@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Scriptorium – Acesso</title>
+    <title>Scriptorium - Acesso</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
@@ -14,19 +14,19 @@
           Scriptorium
         </a>
         <div class="nav-actions">
-          <a class="btn secondary" href="/">Ir para catálogo</a>
+          <a class="btn secondary" href="/catalog.html">Ir para catalogo</a>
         </div>
       </nav>
 
       <header class="hero container">
         <h1>Acesso ao Scriptorium</h1>
-        <p>Registre sua conta ou entre para registrar empréstimos e gerenciar o acervo.</p>
+        <p>Registre sua conta ou entre para acessar o catalogo e gerenciar os emprestimos.</p>
       </header>
 
       <main class="container">
         <section class="form auth-status">
           <h3>Sessão Atual</h3>
-          <p id="sessionStatus" class="muted">Nenhum usuário autenticado.</p>
+          <p id="sessionStatus" class="muted">Nenhum usuario autenticado.</p>
         </section>
 
         <div class="grid-2 auth-grid">
@@ -127,7 +127,7 @@
 
         return {
           id: payload.id,
-          name: payload.name || 'Usuário',
+          name: payload.name || 'Usuario',
           email: payload.email || ''
         };
       }
@@ -136,7 +136,7 @@
         const user = getCurrentUser();
         sessionStatusEl.textContent = user
           ? `Logado como ${user.name} (${user.email}).`
-          : 'Nenhum usuário autenticado.';
+          : 'Nenhum usuario autenticado.';
       }
 
       function showModal({ title, message, type = 'warning', buttonText = 'Entendi' }) {
@@ -177,7 +177,7 @@
 
         if (!name || !email || !password) {
           showModal({
-            title: 'Campos obrigatórios',
+            title: 'Campos obrigatorios',
             message: 'Preencha nome, e-mail e senha para registrar.',
             type: 'warning'
           });
@@ -194,8 +194,8 @@
           document.getElementById('loginEmail').value = email;
           document.getElementById('loginPassword').value = password;
           showModal({
-            title: 'Cadastro concluído',
-            message: 'Usuário registrado com sucesso. Agora faça login.',
+            title: 'Cadastro concluido',
+            message: 'Usuario registrado com sucesso. Agora faca login.',
             type: 'success'
           });
         } catch (error) {
@@ -209,7 +209,7 @@
 
         if (!email || !password) {
           showModal({
-            title: 'Campos obrigatórios',
+            title: 'Campos obrigatorios',
             message: 'Preencha e-mail e senha para entrar.',
             type: 'warning'
           });
@@ -224,7 +224,7 @@
           });
 
           setToken(token);
-          window.location.href = '/';
+          window.location.href = '/catalog.html';
         } catch (error) {
           showModal({ title: 'Falha no login', message: error.message, type: 'error' });
         }
@@ -233,7 +233,7 @@
       logoutBtn.addEventListener('click', () => {
         clearToken();
         updateSessionStatus();
-        showModal({ title: 'Sessão encerrada', message: 'O usuário foi desconectado com sucesso.', type: 'success' });
+        showModal({ title: 'Sessao encerrada', message: 'O usuario foi desconectado com sucesso.', type: 'success' });
       });
 
       modalDismissTopEl.addEventListener('click', closeModal);
@@ -248,6 +248,11 @@
           closeModal();
         }
       });
+
+      const user = getCurrentUser();
+      if (user) {
+        window.location.replace('/catalog.html');
+      }
 
       updateSessionStatus();
     </script>

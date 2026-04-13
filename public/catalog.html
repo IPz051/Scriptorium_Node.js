@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scriptorium - Catalogo</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav">
+        <a class="brand" href="/catalog.html">
+          <span class="sigil"></span>
+          Scriptorium
+        </a>
+        <div class="nav-actions">
+          <span id="currentUser" class="user-chip">Visitante</span>
+          <a id="authLink" class="btn secondary" href="/">Trocar Conta</a>
+          <button id="logoutUser" class="btn danger" type="button">Sair</button>
+          <button id="reload" class="btn">Recarregar</button>
+        </div>
+      </nav>
+
+      <header class="hero container">
+        <h1>Catalogo da Biblioteca</h1>
+        <p>Registre tomos, consulte o acervo e gerencie emprestimos como num antigo scriptorium.</p>
+      </header>
+
+      <main class="container">
+        <div class="grid-2">
+          <section class="form">
+            <h3>Adicionar Livro</h3>
+            <label for="title">Titulo</label>
+            <input id="title" class="input" placeholder="O Nome do Vento" />
+            <label for="author">Autor</label>
+            <input id="author" class="input" placeholder="Patrick Rothfuss" />
+            <label for="qty">Quantidade</label>
+            <input id="qty" type="number" class="input" value="1" min="0" />
+            <button id="addBook" class="btn">Cadastrar Tomo</button>
+          </section>
+
+          <section class="form">
+            <h3>Emprestar Livro</h3>
+            <label for="loanBookId">ID do Livro</label>
+            <input id="loanBookId" class="input" placeholder="ex: 1" />
+            <button id="loanBook" class="btn secondary">Registrar Emprestimo</button>
+          </section>
+        </div>
+
+        <section id="books" class="shelf" aria-live="polite"></section>
+      </main>
+
+      <footer class="footer">
+        <small>Scriptorium - Exercicio Final - Biblioteca</small>
+      </footer>
+    </div>
+
+    <div id="appModal" class="modal-overlay" hidden>
+      <div id="modalCard" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span id="modalBadge" class="modal-badge">i</span>
+            <strong id="modalTitle">Aviso</strong>
+          </div>
+          <button id="modalDismissTop" class="btn secondary" type="button">Fechar</button>
+        </div>
+        <div class="modal-body">
+          <p id="modalMessage"></p>
+        </div>
+        <div class="modal-actions">
+          <button id="modalDismissBottom" class="btn modal-close" type="button">Entendi</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const booksEl = document.getElementById('books');
+      const currentUserEl = document.getElementById('currentUser');
+      const authLinkEl = document.getElementById('authLink');
+      const logoutBtn = document.getElementById('logoutUser');
+      const reloadBtn = document.getElementById('reload');
+      const addBtn = document.getElementById('addBook');
+      const loanBtn = document.getElementById('loanBook');
+      const modalEl = document.getElementById('appModal');
+      const modalCardEl = document.getElementById('modalCard');
+      const modalBadgeEl = document.getElementById('modalBadge');
+      const modalTitleEl = document.getElementById('modalTitle');
+      const modalMessageEl = document.getElementById('modalMessage');
+      const modalDismissTopEl = document.getElementById('modalDismissTop');
+      const modalDismissBottomEl = document.getElementById('modalDismissBottom');
+      const TOKEN_KEY = 'biblioteca_token';
+
+      function getToken() {
+        return localStorage.getItem(TOKEN_KEY);
+      }
+
+      function clearToken() {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+
+      function decodeToken(token) {
+        if (!token) return null;
+
+        try {
+          const payload = token.split('.')[1];
+          const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+          const json = atob(normalized);
+          return JSON.parse(json);
+        } catch (_error) {
+          return null;
+        }
+      }
+
+      function getCurrentUser() {
+        const token = getToken();
+        const payload = decodeToken(token);
+
+        if (!payload?.id) {
+          return null;
+        }
+
+        return {
+          id: payload.id,
+          name: payload.name || 'Usuario',
+          email: payload.email || ''
+        };
+      }
+
+      function ensureAuthenticated() {
+        const user = getCurrentUser();
+        if (!user) {
+          window.location.replace('/');
+          return null;
+        }
+        return user;
+      }
+
+      function updateAuthStatus(user) {
+        currentUserEl.textContent = `${user.name} (${user.email})`;
+        authLinkEl.textContent = 'Trocar Conta';
+        logoutBtn.hidden = false;
+      }
+
+      function showModal({ title, message, type = 'warning', buttonText = 'Entendi' }) {
+        const icons = { success: 'OK', error: '!', warning: 'i' };
+        modalCardEl.className = `modal ${type}`;
+        modalBadgeEl.textContent = icons[type] || 'i';
+        modalTitleEl.textContent = title;
+        modalMessageEl.textContent = message;
+        modalDismissBottomEl.textContent = buttonText;
+        modalEl.hidden = false;
+      }
+
+      function closeModal() {
+        modalEl.hidden = true;
+      }
+
+      async function requestJson(url, options = {}) {
+        const res = await fetch(url, options);
+        let data = null;
+
+        try {
+          data = await res.json();
+        } catch (_error) {
+          data = null;
+        }
+
+        if (!res.ok) {
+          const message = data?.message || 'Nao foi possivel concluir a requisicao.';
+          throw new Error(message);
+        }
+
+        return data;
+      }
+
+      async function fetchBooks() {
+        try {
+          const data = await requestJson('/api/books');
+          renderBooks(data);
+        } catch (error) {
+          showModal({ title: 'Falha ao carregar livros', message: error.message, type: 'error' });
+        }
+      }
+
+      function renderBooks(books) {
+        booksEl.innerHTML = '';
+        books.forEach(b => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h3>${b.title}</h3>
+            <p class="muted">Autor: ${b.author}</p>
+            <p class="muted">ID: ${b.id}</p>
+            <p class="muted">Exemplares: ${b.quantityAvalible}</p>
+            <div style="display:flex; gap:.5rem; margin-top:.5rem; flex-wrap:wrap">
+              <button class="btn danger js-delete" data-id="${b.id}">Remover</button>
+            </div>
+          `;
+          card.querySelector('.js-delete').addEventListener('click', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            await fetch('/api/books/' + id, { method: 'DELETE' });
+            fetchBooks();
+          });
+          booksEl.appendChild(card);
+        });
+      }
+
+      addBtn.addEventListener('click', async () => {
+        const title = document.getElementById('title').value.trim();
+        const author = document.getElementById('author').value.trim();
+        const qty = Number(document.getElementById('qty').value);
+        if (!title || !author || Number.isNaN(qty)) return;
+        try {
+          await requestJson('/api/books', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, author, quantityAvalible: qty })
+          });
+          document.getElementById('title').value = '';
+          document.getElementById('author').value = '';
+          document.getElementById('qty').value = 1;
+          fetchBooks();
+        } catch (error) {
+          showModal({ title: 'Falha ao cadastrar livro', message: error.message, type: 'error' });
+        }
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        clearToken();
+        window.location.href = '/';
+      });
+
+      loanBtn.addEventListener('click', async () => {
+        const bookId = document.getElementById('loanBookId').value.trim();
+        if (!bookId) return;
+        const token = getToken();
+        if (!token) {
+          window.location.href = '/';
+          return;
+        }
+
+        try {
+          await requestJson('/api/loans', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ bookId })
+          });
+          document.getElementById('loanBookId').value = '';
+          showModal({
+            title: 'Emprestimo registrado',
+            message: 'O emprestimo foi criado com sucesso para o livro informado.',
+            type: 'success'
+          });
+          fetchBooks();
+        } catch (error) {
+          showModal({ title: 'Falha ao registrar emprestimo', message: error.message, type: 'error' });
+        }
+      });
+
+      modalDismissTopEl.addEventListener('click', closeModal);
+      modalDismissBottomEl.addEventListener('click', closeModal);
+      modalEl.addEventListener('click', (event) => {
+        if (event.target === modalEl) {
+          closeModal();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modalEl.hidden) {
+          closeModal();
+        }
+      });
+
+      reloadBtn.addEventListener('click', fetchBooks);
+
+      const user = ensureAuthenticated();
+      if (user) {
+        updateAuthStatus(user);
+        fetchBooks();
+      }
+    </script>
+  </body>
+</html>
