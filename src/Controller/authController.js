@@ -40,7 +40,7 @@ module.exports = {
             return res.status(401).json({message: "senha incorreta"})
         }
 
-        const payload = {id: user.id , email: user.email}
+        const payload = {id: user.id , email: user.email, name: user.name}
         const token = jwt.sign(payload , process.env.JWT_SECRETKEY , {expiresIn: "1d"})
         res.json(token)
     }

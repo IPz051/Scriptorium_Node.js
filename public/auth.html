@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scriptorium – Acesso</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav">
+        <a class="brand" href="/">
+          <span class="sigil"></span>
+          Scriptorium
+        </a>
+        <div class="nav-actions">
+          <a class="btn secondary" href="/">Ir para catálogo</a>
+        </div>
+      </nav>
+
+      <header class="hero container">
+        <h1>Acesso ao Scriptorium</h1>
+        <p>Registre sua conta ou entre para registrar empréstimos e gerenciar o acervo.</p>
+      </header>
+
+      <main class="container">
+        <section class="form auth-status">
+          <h3>Sessão Atual</h3>
+          <p id="sessionStatus" class="muted">Nenhum usuário autenticado.</p>
+        </section>
+
+        <div class="grid-2 auth-grid">
+          <section class="form">
+            <h3>Registrar</h3>
+            <label for="registerName">Nome</label>
+            <input id="registerName" class="input" placeholder="Seu nome" />
+            <label for="registerEmail">E-mail</label>
+            <input id="registerEmail" type="email" class="input" placeholder="voce@email.com" />
+            <label for="registerPassword">Senha</label>
+            <input id="registerPassword" type="password" class="input" placeholder="********" />
+            <button id="registerUser" class="btn">Criar Conta</button>
+          </section>
+
+          <section class="form">
+            <h3>Entrar</h3>
+            <label for="loginEmail">E-mail</label>
+            <input id="loginEmail" type="email" class="input" placeholder="voce@email.com" />
+            <label for="loginPassword">Senha</label>
+            <input id="loginPassword" type="password" class="input" placeholder="********" />
+            <div class="stack-actions">
+              <button id="loginUser" class="btn secondary">Entrar</button>
+              <button id="logoutUser" class="btn danger" type="button">Sair</button>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="footer">
+        <small>Scriptorium • Exercicio Final – Biblioteca</small>
+      </footer>
+    </div>
+
+    <div id="appModal" class="modal-overlay" hidden>
+      <div id="modalCard" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span id="modalBadge" class="modal-badge">i</span>
+            <strong id="modalTitle">Aviso</strong>
+          </div>
+          <button id="modalDismissTop" class="btn secondary" type="button">Fechar</button>
+        </div>
+        <div class="modal-body">
+          <p id="modalMessage"></p>
+        </div>
+        <div class="modal-actions">
+          <button id="modalDismissBottom" class="btn modal-close" type="button">Entendi</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const TOKEN_KEY = 'biblioteca_token';
+      const sessionStatusEl = document.getElementById('sessionStatus');
+      const registerBtn = document.getElementById('registerUser');
+      const loginBtn = document.getElementById('loginUser');
+      const logoutBtn = document.getElementById('logoutUser');
+      const modalEl = document.getElementById('appModal');
+      const modalCardEl = document.getElementById('modalCard');
+      const modalBadgeEl = document.getElementById('modalBadge');
+      const modalTitleEl = document.getElementById('modalTitle');
+      const modalMessageEl = document.getElementById('modalMessage');
+      const modalDismissTopEl = document.getElementById('modalDismissTop');
+      const modalDismissBottomEl = document.getElementById('modalDismissBottom');
+
+      function getToken() {
+        return localStorage.getItem(TOKEN_KEY);
+      }
+
+      function setToken(token) {
+        localStorage.setItem(TOKEN_KEY, token);
+      }
+
+      function clearToken() {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+
+      function decodeToken(token) {
+        if (!token) return null;
+
+        try {
+          const payload = token.split('.')[1];
+          const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+          const json = atob(normalized);
+          return JSON.parse(json);
+        } catch (_error) {
+          return null;
+        }
+      }
+
+      function getCurrentUser() {
+        const token = getToken();
+        const payload = decodeToken(token);
+
+        if (!payload?.id) {
+          return null;
+        }
+
+        return {
+          id: payload.id,
+          name: payload.name || 'Usuário',
+          email: payload.email || ''
+        };
+      }
+
+      function updateSessionStatus() {
+        const user = getCurrentUser();
+        sessionStatusEl.textContent = user
+          ? `Logado como ${user.name} (${user.email}).`
+          : 'Nenhum usuário autenticado.';
+      }
+
+      function showModal({ title, message, type = 'warning', buttonText = 'Entendi' }) {
+        const icons = { success: 'OK', error: '!', warning: 'i' };
+        modalCardEl.className = `modal ${type}`;
+        modalBadgeEl.textContent = icons[type] || 'i';
+        modalTitleEl.textContent = title;
+        modalMessageEl.textContent = message;
+        modalDismissBottomEl.textContent = buttonText;
+        modalEl.hidden = false;
+      }
+
+      function closeModal() {
+        modalEl.hidden = true;
+      }
+
+      async function requestJson(url, options = {}) {
+        const res = await fetch(url, options);
+        let data = null;
+
+        try {
+          data = await res.json();
+        } catch (_error) {
+          data = null;
+        }
+
+        if (!res.ok) {
+          throw new Error(data?.message || 'Não foi possível concluir a requisição.');
+        }
+
+        return data;
+      }
+
+      registerBtn.addEventListener('click', async () => {
+        const name = document.getElementById('registerName').value.trim();
+        const email = document.getElementById('registerEmail').value.trim();
+        const password = document.getElementById('registerPassword').value;
+
+        if (!name || !email || !password) {
+          showModal({
+            title: 'Campos obrigatórios',
+            message: 'Preencha nome, e-mail e senha para registrar.',
+            type: 'warning'
+          });
+          return;
+        }
+
+        try {
+          await requestJson('/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
+          });
+
+          document.getElementById('loginEmail').value = email;
+          document.getElementById('loginPassword').value = password;
+          showModal({
+            title: 'Cadastro concluído',
+            message: 'Usuário registrado com sucesso. Agora faça login.',
+            type: 'success'
+          });
+        } catch (error) {
+          showModal({ title: 'Falha ao registrar', message: error.message, type: 'error' });
+        }
+      });
+
+      loginBtn.addEventListener('click', async () => {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!email || !password) {
+          showModal({
+            title: 'Campos obrigatórios',
+            message: 'Preencha e-mail e senha para entrar.',
+            type: 'warning'
+          });
+          return;
+        }
+
+        try {
+          const token = await requestJson('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          setToken(token);
+          window.location.href = '/';
+        } catch (error) {
+          showModal({ title: 'Falha no login', message: error.message, type: 'error' });
+        }
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        clearToken();
+        updateSessionStatus();
+        showModal({ title: 'Sessão encerrada', message: 'O usuário foi desconectado com sucesso.', type: 'success' });
+      });
+
+      modalDismissTopEl.addEventListener('click', closeModal);
+      modalDismissBottomEl.addEventListener('click', closeModal);
+      modalEl.addEventListener('click', (event) => {
+        if (event.target === modalEl) {
+          closeModal();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modalEl.hidden) {
+          closeModal();
+        }
+      });
+
+      updateSessionStatus();
+    </script>
+  </body>
+</html>
