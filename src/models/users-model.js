@@ -1,4 +1,4 @@
-const uuid = require ('uuid').v4 // gerador de ID universal , versão V4
+const { randomUUID } = require("node:crypto")
 const bcrypt = require('bcrypt')
 
 const users = [
@@ -18,7 +18,7 @@ module.exports = {
 
     createUser : (name,email,password) => {
         const newUser = {
-            id : uuid(),
+            id : randomUUID(),
             name,
             email,
             password : bcrypt.hashSync(password,10)

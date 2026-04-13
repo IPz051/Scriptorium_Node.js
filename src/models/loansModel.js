@@ -1,10 +1,10 @@
-const uuid = require('uuid').v4
+const { randomUUID } = require("node:crypto")
 const HttpError = require ('../error/HttpError')
 const booksModel = require('./booksModel')
 
 let loans = [{
 
-    id: uuid(),
+    id: randomUUID(),
     userId: '1' ,
     bookId: '1' ,
     loanDate: new Date('2025-01-01'),
@@ -27,7 +27,7 @@ module.exports = {
         returnDate.setDate(today.getDate() + 14)
 
         const newLoan = {
-            id: uuid(),
+            id: randomUUID(),
             userId: user.id,
             bookId: book.id,
             loanDate: today,

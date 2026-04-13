@@ -1,6 +1,6 @@
 const HttpError = require('../error/HttpError')
 
-const uuid = require('uuid').v4
+const { randomUUID } = require("node:crypto")
 
 let books = [
     {id: '1' , title: 'Book 1' , author: 'author 1' , quantityAvalible: 4},
@@ -14,7 +14,7 @@ module.exports = {
     },
     createBook: (title , author ,quantityAvalible) => {
         const newBook = {
-            id: uuid(),
+            id: randomUUID(),
             title,
             author,
             quantityAvalible
