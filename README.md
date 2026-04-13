@@ -25,7 +25,7 @@ Crie um arquivo `.env` na raiz do projeto com base em `.env.example`:
 ```env
 PORT=3000
 NODE_ENV=development
-JWT_SECRETKEY=sua-chave-secreta
+JWT_SECRETKEY=scriptorium_chave_super_secreta_2026_x7p9k2m8
 ```
 
 Variaveis utilizadas:
