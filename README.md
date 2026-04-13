@@ -25,7 +25,7 @@ Crie um arquivo `.env` na raiz do projeto com base em `.env.example`:
 ```env
 PORT=3000
 NODE_ENV=development
-JWT_SECRETKEY=scriptorium_chave_super_secreta_2026_x7p9k2m8
+JWT_SECRETKEY=Chave-secreta
 ```
 
 Variaveis utilizadas:
@@ -90,6 +90,9 @@ O token e salvo no navegador, a interface exibe o usuario logado no topo do cata
 
 ### Deploy na Vercel
 O projeto foi ajustado para funcionar na Vercel com Express em ambiente serverless.
+
+URL publica do projeto:
+- `https://scriptorium-node-js.vercel.app/`
 
 Arquivos adicionados para isso:
 - `src/app.js`: cria e exporta a aplicacao Express sem abrir porta
